@@ -1,173 +1,83 @@
-#include <thrust/host_vector.h>
-#include <thrust/device_vector.h>
 #include "data_structures.h"
+#include "thrust/host_vector.h"
 #include <float.h>
-#include "auxiliares.h"
-#include "reduce.h"
-
-__device__ int getGlobalIdx_1D_1D() {
-    return blockIdx.x * blockDim.x + threadIdx.x;
-}
 
 /**
- * Kernel cuda para o cálculo do fitness de un individuo da poboación. Obtén a 
+ * Función que obtén o fitness asociado a un individuo da pobación. Obtén a 
  * distancia euclídea de un punto respecto do plano hipotetizado na solución. 
- * Calcula o fitness parcial de cada punto e establece se dito punto pertence á 
- * rexión ou ao umbral do plano.
  * 
  * @param t Umbral do plano (threshold).
  * @param r Rexión do plano (region).
  * @param eps Épsilon de máquina.
- * @param cloud Punteiro á nube en memoria global do dispositivo.
- * @param s Estrutura solution do plano a evaluar.
- * @param fitted Array para conteo de puntos pertencentes ao plano.
- * @param region Array para conteo de puntos na rexión do plano.
- * @param fit Array para almacenar os fitness parciais de cada punto.
- * @param b Base do logaritmo.
- * @param max_log Valor máximo da función logarítmica.
+ * @param cloud host_vector<Solution> que contén a nube de puntos.
+ * @param b Base do logaritmo da función de fitness.
+ * @param p Punteiro a estrutura Solution cos parámetros do plano a evaluar.
+ * @param cloud_size Tamaño da nube.
+ * @return O valor de fitness para este punto.
  */
-__global__ void
-fitness(float t, float r, float eps, Point *cloud, Solution *s, int * fitted,
-        int * region, float * fit, float b, float max_log) {
+float fitness(float t, float r, float eps, thrust::host_vector<Point> cloud,
+        float b, Solution * p, size_t cloud_size) {
 
-    //Arrays en memoria compartida
-    extern __shared__ float array[];
-    float *d = (float*) array;
-    float *k = (float*) &d[blockDim.x];
-    int i = getGlobalIdx_1D_1D();
-    int tid = threadIdx.x;
-    //Cálculo da distancia euclídea.Facemos as escrituras en memoria compartida.
-    k[tid] = sqrtf(powf(s->chromosome[0], 2.0f) + powf(s->chromosome[1], 2.0f)
-            + powf(s->chromosome[2], 2.0f));
-    d[tid] = fabsf(cloud[i].coordinates[0] * s->chromosome[0] + 
-            cloud[i].coordinates[1]* s->chromosome[1] + cloud[i].coordinates[2]
-            * s->chromosome[2] + s->chromosome[3]);
-    if (k[tid] <= 5 * FLT_EPSILON)
-        d[tid] = d[tid] / eps;
+    float d = 0.0f;
+    float k = 0.0f;
+    int i;
+    int l = 0;
+    float fitness = 0.0f;
+    float max_log;
+    p->points_in_region = 0;
+
+    b = powf((r / t), (1.0f / r));
+    max_log = (log10f(r) / log10f(b))-(log10f(t) / log10f(b));
+    for (i = 0; i < cloud_size; i++) {
+        d = fabsf(cloud[i].coordinates[0] * p->chromosome[0] +
+                cloud[i].coordinates[1] * p->chromosome[1] +
+                cloud[i].coordinates[2] * p->chromosome[2] + p->chromosome[3]);
+        k = sqrtf(powf(p->chromosome[0], 2.0f) + powf(p->chromosome[1], 2.0f)
+                + powf(p->chromosome[2], 2.0f));
+        if (k <= 5 * FLT_EPSILON)
+            d = d / eps;
+        else
+            d = d / k;
+        if (d > 5 * FLT_EPSILON && d <= r) {
+            p->points_in_region = p->points_in_region + 1;
+            fitness = fitness + (log10f(d) / log10f(b))-(log10f(t) / log10f(b))
+                    - max_log;
+        }
+        if (d > 5 * FLT_EPSILON && d <= t)
+            l++;
+        if (d < 5 * FLT_EPSILON)
+            p->points_in_region = p->points_in_region + 1;
+    }
+    if (p->points_in_region == 0)
+        fitness = -INFINITY;
     else
-        d[tid] = d[tid] / k[tid];
-    //Facemos as asignacións empregando predicación de instruccións (guía de 
-    //programación de cuda, punto 5.4.2). Esta opción é un 12.5 % máis rápida ca
-    //empregar sentencias if-else e un 25% máis rápida que a versión sen branching
-    //(region[i]=1+r-d[tid], fit[i]=1+t-d[tid]);
-    if (d[tid] > 5 * FLT_EPSILON) {
-        region[i] = (d[tid] <= r ? 1 : 0);
-        fit[i] = d[tid] <= r ? ((log10f(d[tid]) / log10f(b))-(log10f(t) / 
-                log10f(b)) - max_log) : 0;
-        fitted[i] = (d[tid] <= t ? 1 : 0);
-    } else {
-        region[i] = 1;
-        fitted[i] = 0;
-        fit[i] = 0.f;
-    }
+        fitness = -fitness / p->points_in_region * l;
+    p->points_fitted = l;
+    return fitness;
 
 }
 
 /**
- * Función auxiliar para calcular o tamaño de bloque para as chamadas ao kernel 
- * de evaluación de fitness.
- * @param original Tamaño actual do bloque.
- * @param max Tamaño máximo de bloque.
- * @return O novo tamaño de bloque.
- */
-int getBlockSize(int original, int max) {
-
-    while (original > max) {
-        original /= 2;
-    }
-    return original;
-
-}
-
-/**
- * Función auxiliar que chama secuncialmente ao kernel de fitness. Posteriormente,
- * chama ao kernel de reducción e actualiza os valores de fitness, puntos na 
- * rexión e puntos encaixados no plano.
- * 
+ * Función auxiliar que chama á función de fitness para reevaluar a calidade da
+ * poboación.
+ *
  * @param t Umbral do plano (threshold).
  * @param r Rexión do plano (region).
  * @param eps Epsilon de máquina.
- * @param p_d_cloud Punteiro á nube en memoria global
+ * @param cloud host_vector<Point> que contén a nube de puntos.
+ * @param b Base do logaritmo da función de calidade. 
  * @param population Punteiro a host_vector<Solution> que contén a poboación.
- * @param cloud_size Tamaño da nube.
+ * @param cloud_size Tamaño da nube de puntos.
  * @param pop_size Tamaño da poboación.
- * @param fitted Array para conteo de puntos pertencentes ao plano.
- * @param region Array para conteo de puntos na rexión do plano.
- * @param fit Array para almacenar os fitness parciais de cada punto.
- * @return 0 se ha execución é correcta, ou código de erro noutro caso. 
- */
-void evaluate_population_cuda(float t, float r, float eps, Point *p_d_cloud, 
+  */
+void evaluate_population(float t, float r, float eps,
+        thrust::host_vector<Point> cloud, float b,
         thrust::host_vector<Solution> *population, size_t cloud_size,
-        size_t pop_size, thrust::device_vector <int> *fitted, 
-        thrust::device_vector <int> *region, thrust::device_vector<float>*fit) {
+        size_t pop_size) {
 
-    int max_grid_size = 128;
-    int max_block_size = 256;
-    int gridSize = 0;
-    int blockSize = 0;
-    int size = cloud_size;
-    int s = cloud_size;
-    size_t offset = 0;
-    size_t shmemSize = 0;
-    float b = powf((r / t), (1.0f / r));
-    float max_log = max_log = (log10f(r) / log10f(b))-(log10f(t) / log10f(b));
-    int *p_fitted = thrust::raw_pointer_cast(&fitted->operator[](0));
-    int *p_region = thrust::raw_pointer_cast(&region->operator[](0));
-    float *p_fit = thrust::raw_pointer_cast(&fit->operator[](0));
-    thrust::device_vector<Solution> d_pop = *population;
-    Solution *p_d_pop = thrust::raw_pointer_cast(&d_pop.operator[](0));
-    getNumBlocksAndThreads(size, max_grid_size, max_block_size, gridSize, 
-            blockSize);
-    thrust::host_vector<int> h_salida(2 * pop_size * sizeof (int));
-    thrust::host_vector<float>h_fitness(pop_size * sizeof (float));
-    thrust::device_vector<int> d_fitted_salida(gridSize * (sizeof (int)));
-    int *p_d_fitted_salida = thrust::raw_pointer_cast(&d_fitted_salida[0]);
-    thrust::device_vector<int> d_region_salida(gridSize * (sizeof (int)));
-    int *p_d_region_salida = thrust::raw_pointer_cast(&d_region_salida[0]);
-    thrust::device_vector<float> d_fit_salida(gridSize * (sizeof (int)));
-    float *p_d_fit_salida = thrust::raw_pointer_cast(&d_fit_salida[0]);
-    thrust::device_vector <int> salida_datos_enteros(2 * pop_size * sizeof (int));
-    int *p_salida_datos_enteros = thrust::raw_pointer_cast(&salida_datos_enteros[0]);
-    thrust::device_vector <float>salida_datos_float(pop_size * sizeof (int));
-    float *p_salida_datos_float = thrust::raw_pointer_cast(&salida_datos_float[0]);
-
-    for (int j = 0; j < pop_size; j++) {
-        s = cloud_size;
-        offset = 0;
-        blockSize = max_block_size;
-        while (s >= 1) {
-            shmemSize = 2 * blockSize * sizeof (float);
-            gridSize = s / blockSize;
-            fitness << <gridSize, blockSize, shmemSize >> >(t, r, eps, p_d_cloud
-                    + offset, p_d_pop + j, p_fitted + offset, p_region + offset,
-                    p_fit + offset, b, max_log);
-            gpuErrchk(cudaPeekAtLastError());
-            offset += blockSize*gridSize;
-            s = s % blockSize;
-            blockSize = getBlockSize(blockSize, s);
-        }
-        getNumBlocksAndThreads(size, max_grid_size, max_block_size, gridSize,
-                blockSize);
-        performReduction(size, blockSize, gridSize, max_block_size, max_grid_size,
-                p_salida_datos_enteros, p_fitted, p_d_fitted_salida, 2 * j);
-        performReduction(size, blockSize, gridSize, max_block_size, max_grid_size,
-                p_salida_datos_enteros, p_region, p_d_region_salida, 2 * j + 1);
-        performReduction(size, blockSize, gridSize, max_block_size, max_grid_size,
-                p_salida_datos_float, p_fit, p_d_fit_salida, j);
-    }
-    thrust::copy(salida_datos_enteros.begin(), salida_datos_enteros.end(), 
-            h_salida.begin());
-    thrust::copy(salida_datos_float.begin(), salida_datos_float.end(),
-            h_fitness.begin());
-    for (int j = 0; j < pop_size; j++) {
-        population->operator[](j).points_fitted = h_salida[2 * j];
-        population->operator[](j).points_in_region = h_salida[2 * j + 1];
-        if (population->operator[](j).points_in_region == 0)
-            population->operator[](j).fitness = -INFINITY;
-        else
-            population->operator[](j).fitness = (-(h_fitness[j])) /
-                    population->operator[](j).points_in_region *
-                    population->operator[](j).points_fitted;
+    for (int i = 0; i < pop_size; i++) {
+        population->operator[](i).fitness = fitness(t, r, eps, cloud, b,
+                &population->operator[](i), cloud_size);
     }
 
 }

@@ -96,7 +96,7 @@ void write_cloud(thrust::host_vector<Point> cloud, size_t cloud_size, const char
     myfile.open(str, std::ios::out | std::ios::trunc);
     for (int i = 0; i < cloud_size; i++) {
         myfile << "Point:[" << i << "]:(" << cloud[i].coordinates[0] << "," << cloud[i].coordinates[1] << "," << cloud[i].coordinates[2] << ")" << std::endl;
-   //     myfile << "Origin: " << cloud[i].origin << std::endl;
+        //myfile << "Origin: " << cloud[i].origin << std::endl;
 
     }
     myfile.close();
@@ -114,7 +114,7 @@ void write_population(thrust::host_vector<Solution> population, size_t pop_size,
         myfile << "Fitness: "<<population[i].fitness<<std::endl;
         myfile << "Points fitted: " << population[i].points_fitted << std::endl;
         myfile << "Points in region: "<<population[i].points_in_region<<std::endl;
-     //   myfile << "Origin: "<<population[i].adn[0]<<population[i].adn[1]<<population[i].adn[2]<<std::endl;
+      //  myfile << "Origin: "<<population[i].adn[0]<<population[i].adn[1]<<population[i].adn[2]<<std::endl;
 
 
     }

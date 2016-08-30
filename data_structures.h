@@ -11,11 +11,10 @@ typedef struct Solution {
 } Solution;
 
 typedef struct Point {
-    float coordinates[3];
+    float coordinates[3];  
 } Point;
 
 //Estrutura auxiliar para facer a ordenación.
-
 struct SOLUTIONCmp {
 
     __host__ __device__
