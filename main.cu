@@ -83,9 +83,8 @@ int bucle(size_t pop_size, size_t *cloud_size, int max_fail,
                 population, *cloud_size, pop_size); //fitness.cu 
         //Criterio de converxencia do algoritmo
         while (!is_converged(*population, pop_size)) {//auxiliares.cu
-            if (exec_count % 10 == 0)
-                if ((result = tournament_selection(*population, mating_pool,
-                        pop_size, TOUR_SIZE)) != 0) //selection.cu
+            if ((result = tournament_selection(*population, mating_pool,
+                    pop_size, TOUR_SIZE)) != 0) //selection.cu
                     return -3;
             if ((result = recombine(mating_pool, pop_size, CROSS_PROB,
                     CROSS_D_INDEX, upper, lower, EPSILON)) != 0) //crossover.cu
