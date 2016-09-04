@@ -13,12 +13,6 @@
 #include "eliminate.h"
 #include <float.h>
 
-//SHUFFLE
-#include <algorithm>    // std::shuffle
-#include <random>       // std::default_random_engine
-#include <chrono>       // std::chrono::system_clock
-
-
 #define THRESHOLD 0.015f 
 #define PLANE_REGION 0.5f
 #define EPSILON FLT_EPSILON
