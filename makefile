@@ -1,10 +1,10 @@
 TARGET = serie
 TARGET_DBG = serie_dbg
 
-CC = gcc-4.8
+CC = gcc
 NVCC = nvcc
 
-CFLAGS = -Wall -O3 -std=c++11 
+CFLAGS = -Wall -O3 -std=c++11
 SRC = $(wildcard *.cu)
 OBJ = ${SRC:.cu=.o}
 OBJ_DBG = ${SRC:.cu=_dbg.o}
