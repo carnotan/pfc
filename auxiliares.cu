@@ -80,18 +80,61 @@ int shuffle(int *array, size_t N, size_t M) {
 }
 
 /**
- * Calcula se a poboación converxeu dacordo ao criterio do algoritmo .
+ * Función auxiliar que devolve o fitness medio da poboación. Forma parte da 
+ * mellora proposta ao criterio de converxencia para evitar a sobreexplotación 
+ * do algoritmo. 
  * 
- * @param population host_vector de estructuras Solution.
- * @param pop_size tamaño da poboación
- * @return 1 se a poboación converxeu, 0 noutro caso
+ * @param population thrust::host_vector<Solution> que contén a poboación . 
+ * @param pop_size tamaño da poboación. 
+ * @return O fitness medio da poboación.
  */
-int is_converged(thrust::host_vector<Solution> population, size_t pop_size) {
+float average_fitness(thrust::host_vector<Solution> population, size_t pop_size) {
+    float sum = 0;
 
+    for (int i = 0; i < pop_size; i++) {
+        sum += population[i].fitness;
+    }
+    return (sum / pop_size);
+    
+}
+
+/**
+ * Función que determina se a poboación converxeu a unha solución. O criterio de
+ * converxencia é que todos os individuos da poboación teñan o mesmo número de
+ * puntos axustados dentro deles. Esta implementación inclúe a versión mellorada 
+ * proposta de parada anticipada: se durante 10 ciclos completos o algoritmo non 
+ * mellora o fitness medio da poboación unha porcentaxe relativa, a poboación 
+ * considérase igualmente converxida.
+ *  
+ * @param population host_vector de estructuras Solution.
+ * @param pop_size Tamaño da poboación.
+ * @param previous Fitness medio da xeración anterior. 
+ * @param not_improved Contador de veces que o algoritmo mellora por debaixo do
+ * umbral mínimo.
+ * @param fast_convergence Booleano para activar o modo de converxencia
+ * anticipada. 
+ * @param min_growth Crecemento mínimo relativo aceptable no modo de 
+ * converxencia anticipada. 
+ * @return 
+ */
+int is_converged(thrust::host_vector <Solution> population, size_t pop_size,
+        float *previous, int * not_improved, bool fast_convergence,
+        float min_growth) {
+    if (fast_convergence) {
+        float average = average_fitness(population, pop_size);
+        if ((average / (*previous)) <= (1.0f + min_growth))
+            *not_improved = *not_improved + 1;
+        else
+            *not_improved = 0;
+        if (*not_improved == 10) {
+            return 2;
+        }
+        *previous = average;
+    }
     int a = population[0].points_fitted;
-
     for (int i = 1; i < pop_size; i++) {
         if (a != population[i].points_fitted) {
+
             return 0;
         }
     }

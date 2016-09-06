@@ -3,6 +3,7 @@
 
 
 unsigned int nextPow2(unsigned int x);
+extern "C"
 bool isPow2(unsigned int x) ;
 
 template <class T, unsigned int blockSize, bool nIsPow2>

@@ -42,7 +42,8 @@ float get_beta(float u, float eps, float d_index) {
  * @result 0 se se fai correctamente, -1 noutro caso.
  */
 int sbx(Solution *parent1, Solution *parent2, float
-        cross_prob, float d_index, float *upper_b, float *lower_b, float epsilon) {
+        cross_prob, float d_index, float *upper_b, float *lower_b, 
+        float epsilon) {
 
     float beta;
     float u;
@@ -100,8 +101,9 @@ int sbx(Solution *parent1, Solution *parent2, float
  * @param lower_b Límite inferior para o cruce.
  * @param epsilon Épsilon de máquina.
  */
-int recombine(thrust::host_vector <Solution> *mating_pool, size_t pop_size, float
-        cross_prob, float d_index, float *upper_b, float *lower_b, float epsilon) {
+int recombine(thrust::host_vector <Solution> *mating_pool, size_t pop_size, 
+        float cross_prob, float d_index, float *upper_b, float *lower_b,
+        float epsilon) {
 
     int result;
 

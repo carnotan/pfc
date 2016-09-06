@@ -63,7 +63,8 @@ float get_delta(float u, float delta_l, float delta_u, float *d_index) {
  * e R.Agrawal.
  * 
  * @param parent Punteiro á estrutura solution a mutar.
- * @param d_index Punteiro ao índice da función de distribución de probabilidade polinomial. 
+ * @param d_index Punteiro ao índice da función de distribución de probabilidade
+ *  polinomial. 
  * @param upper_b Punteiro ao array de límites superiores.
  * @param lower_b Punteiro ao array de límites inferiores.
  * @param mut_rate Punteiro á taxa de mutación.

@@ -9,7 +9,8 @@
  * @param p1 Punto 1 da nube.
  * @param p2 Punto 2 da nube.
  * @param p3 Punto 3 da nube.
- * @param s Punteiro á estrutura Solution de saída cos parámetros do plano xerado. 
+ * @param s Punteiro á estrutura Solution de saída cos parámetros do plano 
+ * xerado. 
  */
 void get_solution(Point p1, Point p2, Point p3, Solution *s) {
 
