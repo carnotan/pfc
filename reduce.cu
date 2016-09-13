@@ -140,13 +140,8 @@ reduce6(T *g_idata, T *g_odata, unsigned int n) {
  * reducir.
  */
 int getNumBlocksAndThreads(int n, int maxBlocks, int maxThreads, int &blocks, 
-        int &threads) {
+        int &threads, int device, cudaDeviceProp prop) {
 
-    cudaDeviceProp prop;
-    int device;
-
-    gpuErrchk(cudaGetDevice(&device));
-    gpuErrchk(cudaGetDeviceProperties(&prop, device));
     threads = (n < maxThreads * 2) ? nextPow2((n + 1) / 2) : maxThreads;
     blocks = (n + (threads * 2 - 1)) / (threads * 2);
     if ((float) threads * blocks > (float) prop.maxGridSize[0] 
@@ -300,7 +295,7 @@ reduce(int size, int threads, int blocks, T *d_idata, T *d_odata) {
  */
 template <class T>
 void performReduction(int n, int numThreads, int numBlocks, int maxThreads,
-        int maxBlocks, T *d_salida, T *d_idata, T *d_odata, int pos) {
+        int maxBlocks, T *d_salida, T *d_idata, T *d_odata, int pos, int device, cudaDeviceProp prop) {
 
     int s = numBlocks;
 
@@ -308,7 +303,7 @@ void performReduction(int n, int numThreads, int numBlocks, int maxThreads,
     gpuErrchk(cudaPeekAtLastError());
     while (s > 1) {
         int threads = 0, blocks = 0;
-        getNumBlocksAndThreads(s, maxBlocks, maxThreads, blocks, threads);
+        getNumBlocksAndThreads(s, maxBlocks, maxThreads, blocks, threads, device ,prop);
         reduce<T>(s, threads, blocks, d_odata, d_odata);
         s = (s + (threads * 2 - 1)) / (threads * 2);
 
@@ -333,8 +328,8 @@ reduce<float>(int size, int threads, int blocks,
 
 template void
 performReduction(int n, int numThreads, int numBlocks, int maxThreads,
-        int maxBlocks, int *d_salida, int *d_idata, int *d_odata, int pos);
+        int maxBlocks, int *d_salida, int *d_idata, int *d_odata, int pos,int device, cudaDeviceProp prop);
 
 template void
 performReduction(int n, int numThreads, int numBlocks, int maxThreads,
-        int maxBlocks, float *d_salida, float *d_idata, float *d_odata, int pos);
+        int maxBlocks, float *d_salida, float *d_idata, float *d_odata, int pos,int device, cudaDeviceProp prop);

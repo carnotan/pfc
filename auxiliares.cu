@@ -99,13 +99,8 @@ float average_fitness(thrust::host_vector<Solution> population, size_t pop_size)
 }
 
 /**
- * Función que determina se a poboación converxeu a unha solución. O criterio de
- * converxencia é que todos os individuos da poboación teñan o mesmo número de
- * puntos axustados dentro deles. Esta implementación inclúe a versión mellorada 
- * proposta de parada anticipada: se durante 10 ciclos completos o algoritmo non 
- * mellora o fitness medio da poboación unha porcentaxe relativa, a poboación 
- * considérase igualmente converxida.
- *  
+ * Calcula se a poboación converxeu dacordo ao criterio do algoritmo .
+ * 
  * @param population host_vector de estructuras Solution.
  * @param pop_size Tamaño da poboación.
  * @param previous Fitness medio da xeración anterior. 

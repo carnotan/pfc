@@ -11,7 +11,10 @@ typedef struct Solution {
 } Solution;
 
 typedef struct Point {
-    float coordinates[3];
+    //float coordinates[3];
+	float x;
+	float y;
+	float z;
 } Point;
 
 //Estrutura auxiliar para facer a ordenación.

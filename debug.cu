@@ -49,7 +49,7 @@ void show_population(thrust::host_vector<Solution>genome, size_t pop_size) {
 void show_cloud(thrust::host_vector<Point> cloud, size_t cloud_size) {
 
     for (int i = 0; i < cloud_size; i++) {
-        printf("Point[%i]: (%f,%f,%f)\n", i, cloud[i].coordinates[0], cloud[i].coordinates[1], cloud[i].coordinates[2]);
+        printf("Point[%i]: (%f,%f,%f)\n", i, cloud[i].x, cloud[i].y, cloud[i].z);
     }
 }
 
@@ -61,7 +61,7 @@ void write_eliminated(thrust::host_vector<Point> cloud, size_t cloud_size, const
     myfile.open(str, std::ios::out | std::ios::app);
     for (int i = 0; i < cloud_size; i++) {
         if (eliminados[i] == 1) {
-            myfile << "Point:[" << i << "]:(" << cloud[i].coordinates[0] << "," << cloud[i].coordinates[1] << "," << cloud[i].coordinates[2] << ")" << std::endl;
+            myfile << "Point:[" << i << "]:(" << cloud[i].x << "," << cloud[i].y << "," << cloud[i].z << ")" << std::endl;
             //myfile << "Origin: " << cloud[i].origin << std::endl;
 
         }
@@ -78,7 +78,7 @@ void write_eliminated_serie(thrust::host_vector<Point> cloud, size_t eliminados,
     myfile.open(str, std::ios::out | std::ios::app);
     for (int i = size - eliminados; i < size; i++) {
         
-            myfile << "Point:[" << i << "]:(" << cloud[i].coordinates[0] << "," << cloud[i].coordinates[1] << "," << cloud[i].coordinates[2] << ")" << std::endl;
+            myfile << "Point:[" << i << "]:(" << cloud[i].x << "," << cloud[i].y << "," << cloud[i].z << ")" << std::endl;
             //myfile << "Origin: " << cloud[i].origin << std::endl;
 
        
@@ -95,7 +95,7 @@ void write_cloud(thrust::host_vector<Point> cloud, size_t cloud_size, const char
     //mode=std::ios::out|std::ios::ate;
     myfile.open(str, std::ios::out | std::ios::trunc);
     for (int i = 0; i < cloud_size; i++) {
-        myfile << "Point:[" << i << "]:(" << cloud[i].coordinates[0] << "," << cloud[i].coordinates[1] << "," << cloud[i].coordinates[2] << ")" << std::endl;
+        myfile << "Point:[" << i << "]:(" << cloud[i].x << "," << cloud[i].y << "," << cloud[i].z << ")" << std::endl;
    //     myfile << "Origin: " << cloud[i].origin << std::endl;
 
     }
