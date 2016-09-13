@@ -3,6 +3,7 @@
 
 
 unsigned int nextPow2(unsigned int x);
+extern "C"
 bool isPow2(unsigned int x) ;
 
 template <class T, unsigned int blockSize, bool nIsPow2>
@@ -20,7 +21,8 @@ reduce(int size, int threads, int blocks,
 
 template <class T>
 void performReduction(int n, int numThreads, int numBlocks, int maxThreads, 
-        int maxBlocks, T *d_salida, T *d_idata, T *d_odata, int pos, int device, cudaDeviceProp prop) ;
+        int maxBlocks, T *d_salida, T *d_idata, T *d_odata, int pos, int device,
+        cudaDeviceProp prop) ;
 
 
 #endif

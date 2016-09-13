@@ -28,9 +28,9 @@ float get_beta(float u, float eps, float d_index) {
 /**
  * Simulated Binary Crossover proposta por K.Deb e R.Agrawal (1995). Variante 
  * con límite superior e inferior. Realiza o cruce de dous individuos empregando
- * unha distribución de probabilidade para simular cruces de 1 punto en variables 
- * binarias. O cruce realízase con probabilidade xeral cross_prob e con 
- * probabilidade de cruce 0.5 .
+ * unha distribución de probabilidade para simular cruces de 1 punto en 
+ * variables binarias. O cruce realízase con probabilidade xeral cross_prob e 
+ * con probabilidade de cruce 0.5 .
  * 
  * @param parent1 Estructura solution do pai 1.
  * @param parent2 Estructura solution do pai 2.
@@ -42,7 +42,8 @@ float get_beta(float u, float eps, float d_index) {
  * @result 0 se se fai correctamente, -1 noutro caso.
  */
 int sbx(Solution *parent1, Solution *parent2, float
-        cross_prob, float d_index, float *upper_b, float *lower_b, float epsilon) {
+        cross_prob, float d_index, float *upper_b, float *lower_b,
+        float epsilon) {
 
     float beta;
     float u;
@@ -89,8 +90,8 @@ int sbx(Solution *parent1, Solution *parent2, float
 }
 
 /**
- * Función auxiliar. Recorre a poboación e realiza o cruce 2 a 2 , depositando os 
- * na poboación de saída.
+ * Función auxiliar. Recorre a poboación e realiza o cruce 2 a 2 , depositando
+ * os descendentes na poboación de saída.
  * 
  * @param mating_pool Poboación de saída / piscina de reprodución.
  * @param pop_size Tamaño da poboación.
@@ -100,8 +101,9 @@ int sbx(Solution *parent1, Solution *parent2, float
  * @param lower_b Límite inferior para o cruce.
  * @param epsilon Épsilon de máquina.
  */
-int recombine(thrust::host_vector <Solution> *mating_pool, size_t pop_size, float
-        cross_prob, float d_index, float *upper_b, float *lower_b, float epsilon) {
+int recombine(thrust::host_vector <Solution> *mating_pool, size_t pop_size, 
+        float cross_prob, float d_index, float *upper_b, float *lower_b,
+        float epsilon) {
 
     int result;
 

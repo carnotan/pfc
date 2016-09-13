@@ -2,7 +2,6 @@
 #define FITNESS_H
 
 __global__ void
-__launch_bounds__(128, 8)
 fitness(float t, float r, float eps, Point *cloud, Solution *s, int * fitted,
         int * region, float * fit, float b, float max_log);
 

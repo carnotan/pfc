@@ -20,7 +20,8 @@ void replacement(thrust::host_vector<Solution> *pop,
     
     thrust::host_vector <Solution> aux(2 * pop_size);
     thrust::copy(pop->begin(), pop->end(), aux.begin());
-    thrust::copy(mating_pool.begin(), mating_pool.end(), aux.begin() + pop_size);
+    thrust::copy(mating_pool.begin(), mating_pool.end(), aux.begin()
+    + pop_size);
     thrust::sort(aux.begin(), aux.end(), SOLUTIONCmp());
     thrust::copy(aux.begin(), aux.begin() + pop_size, pop->begin());
     

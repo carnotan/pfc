@@ -48,6 +48,9 @@
  * 
  * @param pop_size Tamaño da poboación.
  * @param cloud_size Tamaño da nube.
+ * @param t Umbral do plano.
+ * @param r Rexión do plano.
+ * @param max_exec Número máximo de execucións permitida.  
  * @param max_fail Número máximo de veces que se permite converxer ao algoritmo 
  * sen atopar un plano significativo.
  * @param population Punteiro a host_vector<Solution> que contén a poboación.
@@ -61,29 +64,50 @@
  * arquitectónicamente significativo.
  * @param upper Punteiro ao array de límites superiores.
  * @param lower Punteiro ao array de límites inferiores.
- * @return 0 se o bucle se executa correctamente, o código de erro noutro caso.
+ * @param tour_size Tamaño do torneo.
+ * @param mutation_rate Probabilidade de mutación.
+ * @param mutation_index Índice da función de distribución de probabilidade 
+ * polinomial do operador de mutación.
+ * @param cross_rate Probabilidade de cruce.
+ * @param cross_index Índice da función de distribución de probabilidade do 
+ * operador de cruce.
+ * @param fast_convergence Booleano para indicar se se desexa activar a mellora
+ * de converxencia anticipada.
+ * @param min_growth Crecemento mínimo relativo aceptable no modo de 
+ * converxencia anticipada. 
+ * @param max_block_size Tamaño máximo dos bloques para os kernels de CUDA.
+ * @param max_grid_size Tamaño máximo das mallas para os kernels de CUDA.
+ * @return 0 se o algorimto se executa correctamente, código de erro noutro 
+ * caso.
  */
 int bucle(size_t pop_size, size_t *cloud_size, float t, float r,
-        int max_exec, int max_fail,thrust::host_vector<Solution> *population,
+        int max_exec, int max_fail, thrust::host_vector<Solution> *population,
         thrust::host_vector<Solution> *mating_pool,
         thrust::host_vector<Point> *h_cloud,
-        thrust::device_vector <Point> *d_cloud,size_t plane_min_size,
-        float *upper, float *lower,int tour_size,float mutation_rate,
-        float mutation_index, float cross_rate, float cross_index, 
-        bool fast_convergence, float min_growth, int max_block_size, int max_grid_size) {
-    
+        thrust::device_vector <Point> *d_cloud, size_t plane_min_size,
+        float *upper, float *lower, int tour_size, float mutation_rate,
+        float mutation_index, float cross_rate, float cross_index,
+        bool fast_convergence, float min_growth, int max_block_size,
+        int max_grid_size) {
 
+    int planes_found = 1;
+    std::ofstream myfile;
+    myfile.open("performance.txt", std::ios::out | std::ios::app);
+    cudaEvent_t start, stop, eval_start, eval_stop;
+    float miliseconds;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+    cudaEventCreate(&eval_start);
+    cudaEventCreate(&eval_stop);
     cudaDeviceProp prop;
     int device;
-
     gpuErrchk(cudaGetDevice(&device));
     gpuErrchk(cudaGetDeviceProperties(&prop, device));
 
-        //cambio de criterio de convergencia
+    //cambio de criterio de convergencia
     float * average = (float*) malloc(sizeof (float));
     *average = 1;
     int * not_improved = (int *) malloc(sizeof (int));
-
 
     int fail = 0;
     int exec_count = 0;
@@ -104,9 +128,10 @@ int bucle(size_t pop_size, size_t *cloud_size, float t, float r,
     thrust::device_vector<int> fitted(*cloud_size);
     thrust::device_vector<int> region(*cloud_size);
     thrust::device_vector<float>fit(*cloud_size);
-
+    myfile << "Inicio do algoritmo" << std::endl;
     //Criterio de parada do algoritmo
     while (*cloud_size > 0 && fail < max_fail) {
+        cudaEventRecord(start);
         *mut_rate = mutation_rate;
         *mut_d_index = mutation_index;
         exec_count = 0;
@@ -116,14 +141,15 @@ int bucle(size_t pop_size, size_t *cloud_size, float t, float r,
         if ((result = generate_population(pop_size, *cloud_size, population,
                 h_cloud)) != 0) //generation.cu
             return result;
+        myfile << "#################################" << std::endl;
+        myfile << "Plano número " << planes_found << std::endl;
         normalize(population, pop_size); //generation.cu
         evaluate_population_cuda(t, r, EPSILON,
                 p_d_cloud, population, *cloud_size, pop_size, &fitted, &region,
-                &fit,max_block_size,max_grid_size,device, prop); //fitness.cu
+                &fit, max_block_size, max_grid_size, device, prop); //fitness.cu
         //Criterio de converxencia.
-       while (!is_converged(*population, pop_size, average, not_improved,
-                      fast_convergence, min_growth)){//auxiliares.cu
-      //  for (int i=0;i<10;i++){
+        while (!is_converged(*population, pop_size, average, not_improved,
+                fast_convergence, min_growth)) {//auxiliares.cu
             if ((result = tournament_selection(*population, mating_pool,
                     pop_size, tour_size)) != 0) //selection.cu
                 return -3;
@@ -132,30 +158,45 @@ int bucle(size_t pop_size, size_t *cloud_size, float t, float r,
                 return -4;
             mutation(pop_size, mating_pool, mut_rate, mut_d_index, upper,
                     lower); //mutation.cu 
-            evaluate_population_cuda(t,r, EPSILON,p_d_cloud, mating_pool,
-                    *cloud_size, pop_size, &fitted, &region, &fit, max_block_size, max_grid_size, device, prop); //fitness.cu
+            cudaEventRecord(eval_start);
+            evaluate_population_cuda(t, r, EPSILON, p_d_cloud, mating_pool,
+                    *cloud_size, pop_size, &fitted, &region, &fit,
+                    max_block_size, max_grid_size, device, prop); //fitness.cu
+            cudaEventRecord(eval_stop);
+            cudaEventSynchronize(eval_stop);
+            cudaEventElapsedTime(&miliseconds, eval_start, eval_stop);
+            myfile << "Tempo para avaliar a poboación, ciclo " << exec_count
+                    << ": " << miliseconds << "ms" << std::endl;
             replacement(population, *mating_pool, pop_size); //replacement.cu
             exec_count++;
             recalculate_parameters(mut_d_index, mut_rate, GENE_SIZE, exec_count,
                     max_exec, mutation_index); //mutation.cu
         }
-        //cudaDeviceReset();
-          //   exit(0);
 
-        //Unha vez converxeu a poboación, retiramos da nube os puntos pertencentes
-        //ao plano atopado.
+        //Unha vez converxeu a poboación, retiramos da nube os puntos
+        //pertencentes ao plano atopado.
         if (population->operator[](0).points_fitted > plane_min_size) {
             evaluate_population_cuda(t, r, EPSILON, p_d_cloud,
                     population, *cloud_size, 1, &fitted, &region,
-                    &fit,max_block_size,max_grid_size,device,prop); //fitness.cu
+                    &fit, max_block_size, max_grid_size, device,
+                    prop); //fitness.cu
             thrust::detail::normal_iterator<thrust::device_ptr<Point> > new_end
                     = thrust::remove_if(thrust::device, d_cloud->begin(),
                     d_cloud->end(), fitted.begin(), thrust::identity<int>());
+            cudaEventRecord(stop);
+            cudaEventSynchronize(stop);
+            cudaEventElapsedTime(&miliseconds, start, stop);
+            myfile << "Tempo de execución total para atopar o plano "
+                    << planes_found << ": " << miliseconds << " ms" <<
+                    std::endl;
+            myfile << "#################################" << std::endl;
             write_solution(population->operator[](0)); //auxiliares.cu
             *cloud_size = *cloud_size - population->operator[](0).points_fitted;
             fail = 0;
             thrust::copy(d_cloud->begin(), new_end, h_cloud->begin());
             exec_count = 0;
+            planes_found++;
+
         } else {
             fail++;
         }
@@ -187,11 +228,11 @@ void generate_cloud(thrust::host_vector<Point> *cloud, Solution s, size_t size,
                     (-s.chromosome[1] * j)) / (s.chromosome[2]);
             delta = ((2 * ((float) rand() / (float) RAND_MAX)) - 1) / 200.0f;
 
-            cloud->operator[](i * size / 100 + j + offset).x =
+            cloud->operator[](i * size / 100 + j + offset).coordinates[0] =
                     (float) i + delta;
-            cloud->operator[](i * size / 100 + j + offset).y =
+            cloud->operator[](i * size / 100 + j + offset).coordinates[1] =
                     (float) j + delta;
-            cloud->operator[](i * size / 100 + j + offset).z =
+            cloud->operator[](i * size / 100 + j + offset).coordinates[2] =
                     (float) z + delta;
         }
     }
@@ -230,7 +271,7 @@ int main(int argc, char **argv) {
     lower[3] = -1.0f;
     Solution s;
 
- 
+
     switch (argc) {
         case 1: std::cout << "Modo normal" << std::endl;
             *cloud_size = CLOUD_SIZE;
@@ -246,8 +287,8 @@ int main(int argc, char **argv) {
             tour_size = TOUR_SIZE;
             max_fail = MAX_FAIL;
             fast_convergence = false;
-            max_block_size=256;
-            max_grid_size=128;
+            max_block_size = 256;
+            max_grid_size = 128;
             break;
         case 7: std::cout << "Modo rendemento" << std::endl;
             if ((pop_size = std::stoi(argv[1])) % 2) {
@@ -264,11 +305,16 @@ int main(int argc, char **argv) {
             } else
                 fast_convergence = false;
             min_growth = std::stof(argv[4]);
-            
-            
-            max_block_size=std::stoi(argv[5]);
-            max_grid_size=std::stoi(argv[6]);
-            
+            max_block_size = std::stoi(argv[5]);
+            if (!isPow2(max_block_size) || max_block_size > 1024) {
+                std::cout << "Tamaño de bloque non válido!!" << std::endl;
+                exit(-1);
+            }
+            max_grid_size = std::stoi(argv[6]);
+            if (!isPow2(max_grid_size) || max_grid_size > 65535) {
+                std::cout << "Tamaño de malla non válido!!" << std::endl;
+                exit(-1);
+            }
             mut_rate = MUTATION_RATE;
             mut_d_index = MUTATION_D_INDEX;
             cross_d_index = CROSS_D_INDEX;
@@ -280,7 +326,7 @@ int main(int argc, char **argv) {
             tour_size = TOUR_SIZE;
             max_fail = MAX_FAIL;
             break;
-        case 17: std::cout << "Modo completo" << std::endl;
+        case 17: std::cout << "Modo avanzado" << std::endl;
             if ((pop_size = std::stoi(argv[1])) % 2) {
                 std::cout << "A poboación non pode ser impar" << std::endl;
                 exit(-1);
@@ -293,21 +339,21 @@ int main(int argc, char **argv) {
             r = std::stof(argv[3]);
             t = std::stof(argv[4]);
             if (r < t) {
-                std::cout << "O parámetro r non pode ser menor que o parámetro t"
-                        << std::endl;
+                std::cout << "O parámetro r non pode ser menor que o parámetro "
+                        "t" << std::endl;
                 exit(-1);
             }
             mut_d_index = std::stof(argv[5]);
             if ((mut_rate = std::stof(argv[6])) > 1.0f) {
-                std::cout << "A probabilidade de mutación non pode ser maior ca "
-                        "1!!" << std::endl;
+                std::cout << "A probabilidade de mutación non pode ser maior "
+                        "ca 1!!" << std::endl;
                 exit(-1);
             }
             cross_d_index = std::stof(argv[7]);
 
             if ((cross_rate = std::stof(argv[8])) > 1.0f) {
-                std::cout << "A probabilidade de cruzamento non pode ser maior ca"
-                        "1!!" << std::endl;
+                std::cout << "A probabilidade de cruzamento non pode ser maior"
+                        " ca 1!!" << std::endl;
                 exit(-1);
             }
             max_exec = std::stoi(argv[9]);
@@ -319,13 +365,52 @@ int main(int argc, char **argv) {
             } else
                 fast_convergence = false;
             min_growth = std::stof(argv[14]);
-            max_block_size=std::stoi(argv[15]);
-            max_grid_size=std::stoi(argv[16]);
+            max_block_size = std::stoi(argv[15]);
+            if (!isPow2(max_block_size) || max_block_size > 1024) {
+                std::cout << "Tamaño de bloque non válido!!" << std::endl;
+                exit(-1);
+            }
+            max_grid_size = std::stoi(argv[16]);
+            if (!isPow2(max_grid_size) || max_grid_size > 65535) {
+                std::cout << "Tamaño de malla non válido!!" << std::endl;
+                exit(-1);
+            }
             break;
         default: std::cout << "Número de parámetros incorrecto" << std::endl;
             std::cout << "Uso: " << std::endl;
+            std::cout << "Modo normal: Execución cos parámetros preestablecidos"
+                    << std::endl;
             std::cout << "./serie" << std::endl;
-            std::cout << "\t\tExecución cos parámetros preestablecidos" << std::endl;
+            std::cout << "##################################################"
+                    "####"
+                    << std::endl;
+            std::cout << "Modo rendemento: Estuda o rendemento do algoritmo "
+                    "cambiando os parámetros que afectan ao tempo de execución"
+                    << std::endl;
+            std::cout << "./serie pop_size cloud_size fast_convergence "
+                    "min_growth max_block_size max_grid_size" << std::endl;
+            std::cout << "\tpop_size: tamaño da poboación (número par)"
+                    << std::endl;
+            std::cout << "\tcloud_size: tamaño da nube (múltiplo de 10000)"
+                    << std::endl;
+            std::cout << "\tfast_convergence 1 para activar a converxencia "
+                    "adiantada, 0 para desactivala" << std::endl;
+            std::cout << "\tmin_growth crecemento mínimo aceptable . "
+                    "Recomendado"
+                    "[0.00001,0.001] . (Con fast_convergence=0, introducir "
+                    "calquera valor." << std::endl;
+            std::cout << "\tmax_block_size: Tamaño de bloque dos kernels "
+                    "(múltiplo de 2, menor de 1024)" << std::endl;
+            std::cout << "\tmax_grid_size: Tamaño máximo da malla (múltiplo de"
+                    " 2, menor de 65535" << std::endl;
+            std::cout << "############################################"
+                    "##########"
+                    << std::endl;
+            std::cout << "Modo avanzado:" << std::endl;
+            std::cout << "./serie pop_size cloud_size r t mut_d_index mut_rate"
+                    "cross_d_index cross_rate max_exec significant_plane "
+                    "tour_size max_fail fast_convergence min_growth "
+                    "max_block_size max_grid_size" << std::endl;
             exit(-1);
             break;
     }
@@ -416,20 +501,19 @@ int main(int argc, char **argv) {
     offset += size;
 
     //Baraxamos aleatoriamente a poboación para enfrontar ao algoritmo ao peor 
-    //caso posible (incrementa a diverxencia dentro dos warp no kernel de fitness)
+    //caso posible (incrementa a diverxencia dentro dos warp no kernel 
+    //de fitness)
     unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
     shuffle(h_cloud.begin(), h_cloud.end(), std::default_random_engine(seed));
     thrust::device_vector<Point> d_cloud = h_cloud;
-   
-    
-    int result= bucle(pop_size,cloud_size,t,r,max_exec,max_fail,&population,&mating_pool,
-            &h_cloud,&d_cloud,significant_plane, upper,lower,tour_size,mut_rate,
-            mut_d_index, cross_rate, cross_d_index, fast_convergence, min_growth,
-    max_block_size, max_grid_size);
-    
-    
-    /*int result = bucle(pop_size, cloud_size, max_fail, &population,
-            &mating_pool, &h_cloud, &d_cloud, significant_plane, upper, lower);*/
+
+
+    int result = bucle(pop_size, cloud_size, t, r, max_exec, max_fail,
+            &population, &mating_pool, &h_cloud, &d_cloud, significant_plane,
+            upper, lower, tour_size, mut_rate, mut_d_index, cross_rate,
+            cross_d_index, fast_convergence, min_growth, max_block_size,
+            max_grid_size);
+
     if (result == 1) {
         cudaDeviceReset();
         exit(0);

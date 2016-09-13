@@ -85,7 +85,8 @@ reduce6(T *g_idata, T *g_odata, unsigned int n) {
     if (tid < 32) {
         //Esta instrucción só está dispoñibe en arquitecturas kepler ou 
         superiores.
-        //Emprega a función __shfl_down para realizar a reducción a nivel de warp
+        //Emprega a función __shfl_down para realizar a reducción a nivel de 
+                //warp
         if (blockSize >= 64) mySum += sdata[tid + 32];
         for (int offset = warpSize / 2; offset > 0; offset /= 2) {
             mySum += __shfl_down(mySum, offset);
@@ -295,7 +296,8 @@ reduce(int size, int threads, int blocks, T *d_idata, T *d_odata) {
  */
 template <class T>
 void performReduction(int n, int numThreads, int numBlocks, int maxThreads,
-        int maxBlocks, T *d_salida, T *d_idata, T *d_odata, int pos, int device, cudaDeviceProp prop) {
+        int maxBlocks, T *d_salida, T *d_idata, T *d_odata, int pos, int device,
+        cudaDeviceProp prop) {
 
     int s = numBlocks;
 
@@ -303,7 +305,8 @@ void performReduction(int n, int numThreads, int numBlocks, int maxThreads,
     gpuErrchk(cudaPeekAtLastError());
     while (s > 1) {
         int threads = 0, blocks = 0;
-        getNumBlocksAndThreads(s, maxBlocks, maxThreads, blocks, threads, device ,prop);
+        getNumBlocksAndThreads(s, maxBlocks, maxThreads, blocks, threads, device
+                ,prop);
         reduce<T>(s, threads, blocks, d_odata, d_odata);
         s = (s + (threads * 2 - 1)) / (threads * 2);
 
@@ -328,8 +331,10 @@ reduce<float>(int size, int threads, int blocks,
 
 template void
 performReduction(int n, int numThreads, int numBlocks, int maxThreads,
-        int maxBlocks, int *d_salida, int *d_idata, int *d_odata, int pos,int device, cudaDeviceProp prop);
+        int maxBlocks, int *d_salida, int *d_idata, int *d_odata, int pos,
+        int device, cudaDeviceProp prop);
 
 template void
 performReduction(int n, int numThreads, int numBlocks, int maxThreads,
-        int maxBlocks, float *d_salida, float *d_idata, float *d_odata, int pos,int device, cudaDeviceProp prop);
+        int maxBlocks, float *d_salida, float *d_idata, float *d_odata, 
+        int pos,int device, cudaDeviceProp prop);

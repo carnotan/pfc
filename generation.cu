@@ -9,22 +9,23 @@
  * @param p1 Punto 1 da nube.
  * @param p2 Punto 2 da nube.
  * @param p3 Punto 3 da nube.
- * @param s Punteiro á estrutura Solution de saída cos parámetros do plano xerado. 
+ * @param s Punteiro á estrutura Solution de saída cos parámetros do plano 
+ * xerado. 
  */
 void get_solution(Point p1, Point p2, Point p3, Solution *s) {
 
-    s->chromosome[0] = (((p2.y)-(p1.y))*
-            ((p3.z)-(p1.z)))-(((p3.y)-
-            (p1.y))*((p2.z)-(p1.z)));
-    s->chromosome[1] = ((-1.0f)*((p2.x)-(p1.x))*
-            ((p3.z)-(p1.z)))+(((p3.x)-
-            (p1.x))*((p2.z)-(p1.z)));
-    s->chromosome[2] = (((p2.x)-(p1.x))*
-            ((p3.y)-(p1.y)))-(((p3.x)-
-            (p1.x))*((p2.y)-(p1.y)));
-    s->chromosome[3] = ((-1.0f) * s->chromosome[0] * p1.x -
-            s->chromosome[1] * p1.y - s->chromosome[2]
-            * p1.z);
+    s->chromosome[0] = (((p2.coordinates[1])-(p1.coordinates[1]))*
+            ((p3.coordinates[2])-(p1.coordinates[2])))-(((p3.coordinates[1])-
+            (p1.coordinates[1]))*((p2.coordinates[2])-(p1.coordinates[2])));
+    s->chromosome[1] = ((-1.0f)*((p2.coordinates[0])-(p1.coordinates[0]))*
+            ((p3.coordinates[2])-(p1.coordinates[2])))+(((p3.coordinates[0])-
+            (p1.coordinates[0]))*((p2.coordinates[2])-(p1.coordinates[2])));
+    s->chromosome[2] = (((p2.coordinates[0])-(p1.coordinates[0]))*
+            ((p3.coordinates[1])-(p1.coordinates[1])))-(((p3.coordinates[0])-
+            (p1.coordinates[0]))*((p2.coordinates[1])-(p1.coordinates[1])));
+    s->chromosome[3] = ((-1.0f) * s->chromosome[0] * p1.coordinates[0] -
+            s->chromosome[1] * p1.coordinates[1] - s->chromosome[2] 
+            * p1.coordinates[2]);
 
 }
 
@@ -61,7 +62,8 @@ void normalize(thrust::host_vector<Solution> *population, size_t pop_size) {
  * @param cloud_size Tamaño da nube de puntos.
  * @param population Punteiro a un host_vector<Solution> que contén a poboación.
  * @param cloud Punteiro a un host_vector<Point> que contén a nube de puntos.
- * @return 0 se a poboación se creou correctamente, o código de erro noutro caso.
+ * @return 0 se a poboación se creou correctamente, o código de erro noutro
+ *  caso.
  */
 int generate_population(size_t pop_size, size_t cloud_size, 
         thrust::host_vector<Solution> *population, 

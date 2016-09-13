@@ -57,7 +57,8 @@ int reseed(void) {
  * @return 0 se se xenera o array correctamente, erro noutro caso.
  */
 int shuffle(int *array, size_t N, size_t M) {
-    unsigned char *is_used = (unsigned char *) malloc(N * sizeof (unsigned char));
+    unsigned char *is_used = (unsigned char *) malloc(N * sizeof
+            (unsigned char));
     int in, im;
 
     if (is_used == NULL) {
@@ -88,18 +89,24 @@ int shuffle(int *array, size_t N, size_t M) {
  * @param pop_size tamaño da poboación. 
  * @return O fitness medio da poboación.
  */
-float average_fitness(thrust::host_vector<Solution> population, size_t pop_size) {
+float average_fitness(thrust::host_vector<Solution> population,
+        size_t pop_size) {
     float sum = 0;
 
     for (int i = 0; i < pop_size; i++) {
         sum += population[i].fitness;
     }
     return (sum / pop_size);
-    
+
 }
 
 /**
- * Calcula se a poboación converxeu dacordo ao criterio do algoritmo .
+ * Función que determina se a poboación converxeu a unha solución. O criterio de
+ * converxencia é que todos os individuos da poboación teñan o mesmo número de
+ * puntos axustados dentro deles. Esta implementación inclúe a versión mellorada 
+ * proposta de parada anticipada: se durante 10 ciclos completos o algoritmo non 
+ * mellora o fitness medio da poboación unha porcentaxe relativa, a poboación 
+ * considérase igualmente converxida.
  * 
  * @param population host_vector de estructuras Solution.
  * @param pop_size Tamaño da poboación.
@@ -138,7 +145,8 @@ int is_converged(thrust::host_vector <Solution> population, size_t pop_size,
 }
 
 /**
- * Escribe a configuración do plano atopada no ficheiro de saída "solutions.txt".
+ * Escribe a configuración do plano atopada no ficheiro de saída
+ *  "solutions.txt".
  * 
  * @param s Estructura solution do plano atopado.
  * 
@@ -147,8 +155,8 @@ void write_solution(Solution s) {
 
     std::ofstream myfile;
 
-    printf("Solución atopada: (%f,%f,%f,%f)\n", s.chromosome[0], s.chromosome[1],
-            s.chromosome[2], s.chromosome[3]);
+    printf("Solución atopada: (%f,%f,%f,%f)\n", s.chromosome[0],
+            s.chromosome[1], s.chromosome[2], s.chromosome[3]);
     printf("Puntos do plano: %i\n", s.points_fitted);
     printf("Escribindo resultados.\n");
     myfile.open("solutions.txt", std::ios::out | std::ios::app);
