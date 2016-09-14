@@ -15,13 +15,15 @@
 #include <float.h>
 #include <time.h>
 #include <iostream>
+#include <sys/time.h>
+#include <fstream>
 
 
 #define THRESHOLD 0.010f 
-#define PLANE_REGION 0.70f
+#define PLANE_REGION 0.50f
 #define EPSILON FLT_EPSILON
 #define POPULATION_SIZE 200
-#define CLOUD_SIZE 352600
+#define CLOUD_SIZE 100000
 #define MUTATION_D_INDEX 100
 #define MUTATION_RATE 0.25f
 #define CROSS_D_INDEX 2.0f
@@ -31,6 +33,15 @@
 #define SIGNIFICANT_PLANE 200
 #define TOUR_SIZE 5
 #define MAX_FAIL 3
+
+typedef unsigned long long timestamp_t;
+
+static timestamp_t
+get_timestamp() {
+    struct timeval now;
+    gettimeofday(&now, NULL);
+    return now.tv_usec + (timestamp_t) now.tv_sec * 1000000;
+}
 
 /**
  * Función que executa o bucle principal do algoritmo. Ao contrario dos 
@@ -77,6 +88,12 @@ int bucle(size_t pop_size, size_t *cloud_size, float threshold, float region,
         float mutation_rate, float mutation_index, float cross_rate,
         float cross_index, bool fast_convergence, float min_growth) {
 
+    int planes_found = 1;
+    std::ofstream myfile;
+    myfile.open("performance.txt", std::ios::out | std::ios::app);
+    float miliseconds;
+    timestamp_t t0, t1, t2, t3;
+
     //cambio de criterio de convergencia
     float * average = (float*) malloc(sizeof (float));
     *average = 1;
@@ -88,14 +105,18 @@ int bucle(size_t pop_size, size_t *cloud_size, float threshold, float region,
     float *base = (float*) malloc(sizeof (float));
     float * m_rate = (float *) malloc(sizeof (float));
     float * m_d_index = (float *) malloc(sizeof (float));
+    myfile << "Inicio do algoritmo" << std::endl;
     //Criterio de parada do algoritmo.
     while (*cloud_size > 0 && fail < max_fail) {
+        t0 = get_timestamp();
         *m_rate = mutation_rate;
         *m_d_index = mutation_index;
         exec_count = 0;
         if ((result = generate_population(pop_size, *cloud_size, population,
                 cloud)) != 0) //generation.cu
             return result;
+        myfile << "#################################" << std::endl;
+        myfile << "Plano número " << planes_found << std::endl;
         normalize(population, pop_size); //generation.cu
         evaluate_population(threshold, region, EPSILON, *cloud, *base,
                 population, *cloud_size, pop_size); //fitness.cu 
@@ -110,8 +131,13 @@ int bucle(size_t pop_size, size_t *cloud_size, float threshold, float region,
                 return -4;
             mutation(pop_size, mating_pool, m_rate, m_d_index, upper,
                     lower); //mutation.cu
+            t2=get_timestamp();
             evaluate_population(threshold, region, EPSILON, *cloud, *base,
                     mating_pool, *cloud_size, pop_size); //fitness.cu
+            t3=get_timestamp();
+            miliseconds=(t3-t2)/1000;
+            myfile << "Tempo para avaliar a poboación, ciclo " << exec_count
+                    << ": " << miliseconds << "ms" << std::endl;
             replacement(population, *mating_pool, pop_size); //replacement.cu
             exec_count++;
             recalculate_parameters(m_d_index, m_rate, GENE_SIZE, exec_count,
@@ -122,9 +148,16 @@ int bucle(size_t pop_size, size_t *cloud_size, float threshold, float region,
         if (population->operator[](0).points_fitted > plane_min_size) {
             eliminate(population->operator[](0), cloud_size, cloud, threshold,
                     EPSILON); //eliminate.cu
+            t1 = get_timestamp();
+            miliseconds = (t1 - t0) / 1000;
+            myfile << "Tempo de execución total para atopar o plano "
+                    << planes_found << ": " << miliseconds << " ms" <<
+                    std::endl;
+            myfile << "#################################" << std::endl;
             write_solution(population->operator[](0)); //auxiliares.cu
             fail = 0;
             exec_count = 0;
+            planes_found++;
         } else {
             fail++;
         }
@@ -400,12 +433,12 @@ int main(int argc, char ** argv) {
     size = (*cloud_size / 100)*3;
     generate_cloud(&cloud, s, size, offset);
     offset += size;
-    
 
-    int result=bucle(pop_size, cloud_size, t, r, max_exec, max_fail,
+
+    int result = bucle(pop_size, cloud_size, t, r, max_exec, max_fail,
             &population, &mating_pool, &cloud, significant_plane, upper, lower,
             tour_size, mut_rate, mut_d_index, cross_rate, cross_d_index,
             fast_convergence, min_growth);
-    
+
     return result;
 }
