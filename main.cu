@@ -91,8 +91,10 @@ int bucle(size_t pop_size, size_t *cloud_size, float t, float r,
         int max_grid_size) {
 
     int planes_found = 1;
+    float av_fitness;
+    float time_acumulated = 0;
     std::ofstream myfile;
-    myfile.open("performance.txt", std::ios::out | std::ios::app);
+    myfile.open("performance.txt", std::ios::out | std::ios::trunc);
     cudaEvent_t start, stop, eval_start, eval_stop;
     float miliseconds;
     cudaEventCreate(&start);
@@ -128,7 +130,11 @@ int bucle(size_t pop_size, size_t *cloud_size, float t, float r,
     thrust::device_vector<int> fitted(*cloud_size);
     thrust::device_vector<int> region(*cloud_size);
     thrust::device_vector<float>fit(*cloud_size);
-    myfile << "Inicio do algoritmo" << std::endl;
+    myfile << "Inicio do algoritmo." << std::endl;
+    myfile << "Tamaño da nube: " << *cloud_size << std::endl;
+    myfile << "Tamaño da poboación: " << pop_size << std::endl;
+    myfile << "Tamaño máximo de bloque (CUDA): " << max_block_size << std::endl;
+    myfile << "Tamaño máximo de malla (CUDA): " << max_grid_size << std::endl;
     //Criterio de parada do algoritmo
     while (*cloud_size > 0 && fail < max_fail) {
         cudaEventRecord(start);
@@ -165,9 +171,12 @@ int bucle(size_t pop_size, size_t *cloud_size, float t, float r,
             cudaEventRecord(eval_stop);
             cudaEventSynchronize(eval_stop);
             cudaEventElapsedTime(&miliseconds, eval_start, eval_stop);
+            time_acumulated += miliseconds;
             myfile << "Tempo para avaliar a poboación, ciclo " << exec_count
                     << ": " << miliseconds << "ms" << std::endl;
             replacement(population, *mating_pool, pop_size); //replacement.cu
+            av_fitness = average_fitness(*population, pop_size);
+            myfile << "Fitness medio da poboación: " << av_fitness << std::endl;
             exec_count++;
             recalculate_parameters(mut_d_index, mut_rate, GENE_SIZE, exec_count,
                     max_exec, mutation_index); //mutation.cu
@@ -189,7 +198,14 @@ int bucle(size_t pop_size, size_t *cloud_size, float t, float r,
             myfile << "Tempo de execución total para atopar o plano "
                     << planes_found << ": " << miliseconds << " ms" <<
                     std::endl;
+            myfile << "Tempo de execución de avaliación de fitnes para este"
+                    " plano: " << time_acumulated << " ms ." << std::endl;
+            myfile << "Tempo medio de avaliación por ciclo: " <<
+                    time_acumulated / exec_count << " ms." << std::endl;
+            myfile << "Porcentaxe de tempo respecto do tempo total: " <<
+                    time_acumulated / miliseconds * 100 << " %" << std::endl;
             myfile << "#################################" << std::endl;
+            time_acumulated = 0;
             write_solution(population->operator[](0)); //auxiliares.cu
             *cloud_size = *cloud_size - population->operator[](0).points_fitted;
             fail = 0;
@@ -198,9 +214,12 @@ int bucle(size_t pop_size, size_t *cloud_size, float t, float r,
             planes_found++;
 
         } else {
+            time_acumulated=0;
+            exec_count=0;
             fail++;
         }
     }
+    myfile.close();
     return 0;
 
 }

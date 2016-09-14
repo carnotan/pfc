@@ -38,7 +38,7 @@ void show_population(thrust::host_vector<Solution>genome, size_t pop_size) {
         printf("Points in region:%i\n",genome[i].points_in_region);
         printf("With fitness: %f\n", genome[i].fitness);
 //        printf("ADN: %i%i%i\n",genome[i].adn[0],genome[i].adn[1],
-        genome[i].adn[2]);
+      //  genome[i].adn[2]);
     }
     printf("******************\n");
 }
@@ -134,7 +134,7 @@ void write_population(thrust::host_vector<Solution> population, size_t pop_size,
         myfile << "Points in region: "
                 <<population[i].points_in_region<<std::endl;
      //   myfile << "Origin: "<<population[i].adn[0]<<population[i].adn[1]
-        <<population[i].adn[2]<<std::endl;
+       // <<population[i].adn[2]<<std::endl;
 
 
     }

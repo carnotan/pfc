@@ -96,7 +96,9 @@ int getBlockSize(int original, int max) {
  * @param region Array para conteo de puntos na rexión do plano.
  * @param fit Array para almacenar os fitness parciais de cada punto.
  * @param maxblock Tamaño máximo do bloque para os kernels.
- * @param maxgrid Tamaño máxima da malla de bloques.  
+ * @param maxgrid Tamaño máxima da malla de bloques.
+ * @param device Identificador da GPU empregada.
+ * @param prop estrutura que contén as propiedades da GPU.  
  * @return 0 se a execución é correcta, ou código de erro noutro caso. 
  */
 void evaluate_population_cuda(float t, float r, float eps, Point *p_d_cloud,

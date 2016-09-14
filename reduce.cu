@@ -137,6 +137,8 @@ reduce6(T *g_idata, T *g_odata, unsigned int n) {
  * @param maxThreads Número máximo de threads por bloque.
  * @param blocks Número de bloques.
  * @param threads Número de threads.
+ * @param device Identificador da GPU empregada.
+ * @param prop Estrutura que contén as propiedades da GPU empregada. 
  * @return 0 se se obtiveron os parámetros correctamente, -1 se non é posible
  * reducir.
  */
@@ -293,6 +295,8 @@ reduce(int size, int threads, int blocks, T *d_idata, T *d_odata) {
  * @param d_idata Punteiro ao array de datos de entrada en memoria global.
  * @param d_odata Punteiro ao array de datos de saída en memoria global.
  * @param pos Posición na que escribimos os datos en d_salida
+ * @param device Identificador da GPU empregada.
+ * @param prop Estrutura que contén as propiedades da GPU empregada. 
  */
 template <class T>
 void performReduction(int n, int numThreads, int numBlocks, int maxThreads,
