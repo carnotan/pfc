@@ -90,8 +90,10 @@ int bucle(size_t pop_size, size_t *cloud_size, float threshold, float region,
 
     int planes_found = 1;
     std::ofstream myfile;
-    myfile.open("performance.txt", std::ios::out | std::ios::app);
+    myfile.open("performance.txt", std::ios::out | std::ios::trunc);
     float miliseconds;
+    float av_fitness;
+    float time_acumulated=0;
     timestamp_t t0, t1, t2, t3;
 
     //cambio de criterio de convergencia
@@ -106,6 +108,8 @@ int bucle(size_t pop_size, size_t *cloud_size, float threshold, float region,
     float * m_rate = (float *) malloc(sizeof (float));
     float * m_d_index = (float *) malloc(sizeof (float));
     myfile << "Inicio do algoritmo" << std::endl;
+    myfile << "Tamaño da nube: " << *cloud_size << std::endl;
+    myfile << "Tamaño da poboación: " << pop_size << std::endl;
     //Criterio de parada do algoritmo.
     while (*cloud_size > 0 && fail < max_fail) {
         t0 = get_timestamp();
@@ -136,9 +140,12 @@ int bucle(size_t pop_size, size_t *cloud_size, float threshold, float region,
                     mating_pool, *cloud_size, pop_size); //fitness.cu
             t3=get_timestamp();
             miliseconds=(t3-t2)/1000;
+            time_acumulated+=miliseconds;
             myfile << "Tempo para avaliar a poboación, ciclo " << exec_count
                     << ": " << miliseconds << "ms" << std::endl;
             replacement(population, *mating_pool, pop_size); //replacement.cu
+             av_fitness = average_fitness(*population, pop_size);
+            myfile << "Fitness medio da poboación: " << av_fitness << std::endl;
             exec_count++;
             recalculate_parameters(m_d_index, m_rate, GENE_SIZE, exec_count,
                     max_exec, mutation_index); //mutation.cu
@@ -153,12 +160,21 @@ int bucle(size_t pop_size, size_t *cloud_size, float threshold, float region,
             myfile << "Tempo de execución total para atopar o plano "
                     << planes_found << ": " << miliseconds << " ms" <<
                     std::endl;
+             myfile << "Tempo de execución de avaliación de fitnes para este"
+                    " plano: " << time_acumulated << " ms ." << std::endl;
+            myfile << "Tempo medio de avaliación por ciclo: " <<
+                    time_acumulated / exec_count << " ms." << std::endl;
+            myfile << "Porcentaxe de tempo respecto do tempo total: " <<
+                    time_acumulated / miliseconds * 100 << " %" << std::endl;
             myfile << "#################################" << std::endl;
             write_solution(population->operator[](0)); //auxiliares.cu
             fail = 0;
             exec_count = 0;
             planes_found++;
+            time_acumulated=0;
         } else {
+            exec_count=0;
+            time_acumulated=0;
             fail++;
         }
     }

@@ -148,7 +148,8 @@ int is_converged(std::vector<Solution> population, size_t pop_size,
 }
 
 /**
- * Escribe a configuración do plano atopada no ficheiro de saída "solutions.txt".
+ * Escribe a configuración do plano atopada no ficheiro de saída 
+ * "solutions.txt".
  * 
  * @param s Estructura solution do plano atopado.
  * 
@@ -157,8 +158,8 @@ void write_solution(Solution s) {
 
     std::ofstream myfile;
 
-    printf("Solución atopada: (%f,%f,%f,%f)\n", s.chromosome[0], s.chromosome[1],
-            s.chromosome[2], s.chromosome[3]);
+    printf("Solución atopada: (%f,%f,%f,%f)\n", s.chromosome[0], 
+            s.chromosome[1], s.chromosome[2], s.chromosome[3]);
     printf("Puntos do plano: %i\n", s.points_fitted);
     printf("Escribindo resultados.\n");
     myfile.open("solutions.txt", std::ios::out | std::ios::app);
