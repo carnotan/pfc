@@ -399,14 +399,14 @@ int main(int argc, char **argv) {
             std::cout << "Uso: " << std::endl;
             std::cout << "Modo normal: Execución cos parámetros preestablecidos"
                     << std::endl;
-            std::cout << "./serie" << std::endl;
+            std::cout << "./paralelo" << std::endl;
             std::cout << "##################################################"
                     "####"
                     << std::endl;
             std::cout << "Modo rendemento: Estuda o rendemento do algoritmo "
                     "cambiando os parámetros que afectan ao tempo de execución"
                     << std::endl;
-            std::cout << "./serie pop_size cloud_size fast_convergence "
+            std::cout << "./paralelo pop_size cloud_size fast_convergence "
                     "min_growth max_block_size max_grid_size" << std::endl;
             std::cout << "\tpop_size: tamaño da poboación (número par)"
                     << std::endl;
@@ -426,7 +426,7 @@ int main(int argc, char **argv) {
                     "##########"
                     << std::endl;
             std::cout << "Modo avanzado:" << std::endl;
-            std::cout << "./serie pop_size cloud_size r t mut_d_index mut_rate"
+            std::cout << "./paralelo pop_size cloud_size r t mut_d_index mut_rate"
                     "cross_d_index cross_rate max_exec significant_plane "
                     "tour_size max_fail fast_convergence min_growth "
                     "max_block_size max_grid_size" << std::endl;
